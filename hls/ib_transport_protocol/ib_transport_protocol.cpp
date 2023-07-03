@@ -1086,11 +1086,14 @@ void generate_exh(	stream<event>&			metaIn,
 			sendWord.last = 0;
 			switch(meta.op_code)
 			{
+			//case RC_RDMA_WRITE_ONLY || RC_RDMA_WRITE_FIRST || RC_RDMA_PART_ONLY || RC_RDMA_PART_FIRST :
 			case RC_RDMA_WRITE_ONLY:
 			case RC_RDMA_WRITE_FIRST:
 			case RC_RDMA_PART_ONLY:
 			case RC_RDMA_PART_FIRST:
 			{
+				std::cout << meta.op_code;
+				std::cout << std::endl;
 				// [BTH][RETH][PayLd]
 				rdmaHeader.setVirtualAddress(meta.addr);
 				rdmaHeader.setLength(meta.length); //TODO Move up??
@@ -1098,7 +1101,14 @@ void generate_exh(	stream<event>&			metaIn,
 				ap_uint<8> remainingLength = rdmaHeader.consumeWord(sendWord.data);
 				sendWord.keep = ~0;
 				sendWord.last = (remainingLength == 0);
-				std::cout << "RDMA_WRITE_ONLY/FIRST ";
+				if (meta.op_code == RC_RDMA_WRITE_ONLY)
+						{
+					std::cout << "RDMA_WRITE_ONLY ";
+						}
+				if (meta.op_code == RC_RDMA_WRITE_FIRST)
+				{
+					std::cout << "RDMA_WRITE_FIRST ";
+				}
 				print(std::cout, sendWord);
 				std::cout << std::endl;
 				output.write(sendWord);
@@ -1138,11 +1148,22 @@ void generate_exh(	stream<event>&			metaIn,
 				}
 				break;
 			}
+			//case RC_RDMA_WRITE_MIDDLE || RC_RDMA_WRITE_LAST || RC_RDMA_PART_MIDDLE || RC_RDMA_PART_LAST:
 			case RC_RDMA_WRITE_MIDDLE:
 			case RC_RDMA_WRITE_LAST:
 			case RC_RDMA_PART_MIDDLE:
 			case RC_RDMA_PART_LAST:
 				// [BTH][PayLd]
+				if (meta.op_code == RC_RDMA_WRITE_MIDDLE)
+				{
+					std::cout << "RDMA_WRITE_MIDDLE ";
+				}
+				if (meta.op_code == RC_RDMA_WRITE_LAST)
+				{
+					std::cout << "RDMA_WRITE_LAST ";
+				}
+				print(std::cout, sendWord);
+				std::cout << std::endl;
 				info.isAETH = false;
 				info.hasHeader = false;
 				info.hasPayload = (meta.length != 0); //TODO should be true
@@ -2138,7 +2159,21 @@ void tx_pkg_arbiter(stream<pkgInfo>&	tx_pkgInfoFifo,
 			{
 				currWord.last = 1;
 				wordCounter = 0;
+				if (info.words > PMTU_WORDS)
+				{
+					state = FWD_STREAM_RAW;
+				}
+				info.words -= PMTU_WORDS;
 			}
+			/*
+			info.words -= PMTU_WORDS;
+			if (wordCounter == PMTU_WORDS)
+			{
+				currWord.last = 1;
+				wordCounter = 0;
+				state = FWD_STREAM_RAW;
+			}
+			 */
 			localReadData.write(currWord);
 
 		}

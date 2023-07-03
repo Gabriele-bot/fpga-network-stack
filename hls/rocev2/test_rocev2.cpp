@@ -1441,17 +1441,18 @@ int test_tx_debug(std::ifstream& inputFile, std::ofstream& outputFile, ap_uint<1
 		count++;
 	}
 	//create packet
-	int pkgLen = 16384;
+	int pkgLen = 64*43;
 	uint64_t* dataPtr = (uint64_t*) memory.createChunk(pkgLen);
 	//populate chunk
 	uint64_t* uPtr = dataPtr;
+	/*
 	for (int j = 0; j < pkgLen; j += 8)
 	{
 		*uPtr = j + 20;
 		uPtr++;
 	}
-
-	s_axis_tx_meta.write(txMeta(APP_WRITE, 0x11, (uint64_t)dataPtr, 0x7fc292600000, pkgLen));
+	*/
+	s_axis_tx_meta.write(txMeta(APP_WRITE_IMD, 0x11, 0, 0x7fc292600000, pkgLen));
 
 	//process write packet
 	int pkgCount = 0;
@@ -1476,7 +1477,7 @@ int test_tx_debug(std::ifstream& inputFile, std::ofstream& outputFile, ap_uint<1
 				int len = pkgLen-pkgCount;
 				if (len > PMTU)
 					len = PMTU;
-				s_axis_tx_meta.write(txMeta(APP_WRITE, 0x11, 0, 0x019d5040, len));
+				//s_axis_tx_meta.write(txMeta(APP_WRITE, 0x11, 0, 0x019d5040, len));
 			}
 		}
 		if (count > 10000) {
@@ -1773,24 +1774,24 @@ int main(int argc, char* argv[])
 	std::ofstream rxOutputFile;
 	std::ifstream txInputFile;
 	std::ofstream txOutputFile;
-
+	/*
 	if (argc < 3)
 	{
 		std::cout << "[ERROR] missing arguments." << std::endl;
 		return -1;
 	}
-
+	*/
 	rxInputFile.open(argv[1]);
 	if (!rxInputFile)
 	{
-		std::cout << "[ERROR] could not open test rx input file." << std::endl;
+		std::cout << "[ERROR] could not open test rx input file 1." << std::endl;
 		return -1;
 	}
 
 	rxOutputFile.open(argv[2]);
 	if (!rxOutputFile)
 	{
-		std::cout << "[ERROR] could not open test rx output file." << std::endl;
+		std::cout << "[ERROR] could not open test rx output file 2." << std::endl;
 		return -1;
 	}
 
@@ -1810,7 +1811,7 @@ int main(int argc, char* argv[])
 
 	int ret = 0;
 	// Test RX path
-	ret = test_rx(&dram, rxInputFile, rxOutputFile, rev_ip_address, rev_remote_ip_address);
+	//ret = test_rx(&dram, rxInputFile, rxOutputFile, rev_ip_address, rev_remote_ip_address);
 	//ret = get_network_input(&dram, rxInputFile, rxOutputFile);
 	//ret = test_rx_nak(&dram, rxInputFile, rxOutputFile, rev_ip_address, rev_remote_ip_address);
 	std::cout << "Test:\tRX path\t\t";
@@ -1827,6 +1828,7 @@ int main(int argc, char* argv[])
 	//ret = test_tx_host(&dram, txInputFile, txOutputFile, rev_ip_address, rev_remote_ip_address);
 	//ret = test_tx_latency(txInputFile, txOutputFile, rev_ip_address, rev_remote_ip_address);
 	//ret = test_tx_read(txInputFile, txOutputFile, rev_ip_address, rev_remote_ip_address);
+	ret = test_tx_debug(txInputFile, txOutputFile, rev_ip_address, rev_remote_ip_address);
 	std::cout << "Test:\tTX path\t\t";
 	if (ret == 0)
 	{

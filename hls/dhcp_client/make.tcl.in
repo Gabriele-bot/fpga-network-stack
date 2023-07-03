@@ -12,6 +12,7 @@ add_files ${CMAKE_CURRENT_SOURCE_DIR}/dhcp_client.cpp -cflags "-I${CMAKE_CURRENT
 
 #add_files -tb test_dhcp_client.cpp
 
+config_rtl -prefix dhcp_client_
 
 #Check which command
 set command [lindex $argv 2]
@@ -21,6 +22,7 @@ if {$command == "synthesis"} {
 } elseif {$command == "csim"} {
    csim_design
 } elseif {$command == "ip"} {
+
    export_design -format ip_catalog -ipname "dhcp_client" -display_name "DHCP Client" -description "DHCP Client to be used with the Xilinx Labs TCP & UDP offload engines." -vendor "xilinx.labs" -version "1.05"
 } elseif {$command == "installip"} {
    file mkdir ${IPREPO_DIR}

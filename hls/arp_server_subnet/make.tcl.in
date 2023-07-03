@@ -13,7 +13,7 @@ add_files ${CMAKE_CURRENT_SOURCE_DIR}/arp_server_subnet.cpp -cflags "-I${CMAKE_C
 
 add_files -tb ${CMAKE_CURRENT_SOURCE_DIR}/test_arp_server_subnet.cpp -cflags "-I${CMAKE_CURRENT_BINARY_DIR}"
 
-
+config_rtl -prefix arp_server_subnet_
 
 #Check which command
 set command [lindex $argv 2]
@@ -23,6 +23,7 @@ if {$command == "synthesis"} {
 } elseif {$command == "csim"} {
    csim_design -clean -argv {${CMAKE_CURRENT_SOURCE_DIR}/in.dat ${CMAKE_CURRENT_SOURCE_DIR}/out.dat}
 } elseif {$command == "ip"} {
+   config_rtl -prefix arp_server_subnet_
    export_design -format ip_catalog -ipname "arp_server_subnet" -display_name "ARP Subnet Server" -description "Replies to ARP queries and resolves IP addresses." -vendor "ethz.systems.fpga" -version "1.1"
 } elseif {$command == "installip"} {
    file mkdir ${IPREPO_DIR}

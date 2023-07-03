@@ -16,6 +16,7 @@ add_files ${CMAKE_CURRENT_SOURCE_DIR}/ipv6.cpp -cflags "-I${CMAKE_CURRENT_BINARY
 
 
 config_rtl -disable_start_propagation
+config_rtl -prefix ipv6_
 
 #Check which command
 set command [lindex $argv 2]

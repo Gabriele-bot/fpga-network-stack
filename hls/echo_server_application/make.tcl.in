@@ -12,6 +12,7 @@ add_files ${CMAKE_CURRENT_SOURCE_DIR}/echo_server_application.cpp -cflags "-I${C
 
 #add_files -tb test_echo_server_application.cpp
 
+config_rtl -prefix echo_server_application_
 
 #Check which command
 set command [lindex $argv 2]

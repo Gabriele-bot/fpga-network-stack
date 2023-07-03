@@ -12,6 +12,7 @@ add_files ${CMAKE_CURRENT_SOURCE_DIR}/hash_table.cpp -cflags "-std=c++11 -I${CMA
 
 add_files -tb ${CMAKE_CURRENT_SOURCE_DIR}/test_hash_table.cpp -cflags "-std=c++11 -I${CMAKE_CURRENT_BINARY_DIR}"
 
+config_rtl -prefix hash_table_
 
 #Check which command
 set command [lindex $argv 2]

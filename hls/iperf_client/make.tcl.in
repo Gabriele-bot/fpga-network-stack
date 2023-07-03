@@ -12,6 +12,7 @@ add_files ${CMAKE_CURRENT_SOURCE_DIR}/iperf_client.cpp -cflags "-I${CMAKE_CURREN
 
 add_files -tb ${CMAKE_CURRENT_SOURCE_DIR}/test_iperf_client.cpp
 
+config_rtl -prefix iperf_client_
 
 #Check which command
 set command [lindex $argv 2]

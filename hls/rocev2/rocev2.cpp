@@ -180,47 +180,90 @@ void mask_header_fields(stream<net_axis<WIDTH> >& input,
 {
 #pragma HLS inline off
 #pragma HLS pipeline II=1
-
+ /*            crc_in(63 downto 0)    := (others => '1'); -- Dummy LRH field
+            icrc_in(463 downto 64)  := crc_in_axis_tdata(511 downto 112);
+            icrc_in(79 downto 72)   := (others => '1'); -- Type of service 1s
+            icrc_in(135 downto 128) := (others => '1'); -- TTL 1s
+            icrc_in(159 downto 144) := (others => '1'); -- IP Checksum 1s
+            icrc_in(287 downto 272) := (others => '1'); -- UDP Checksum ls
+            icrc_in(327 downto 320) := (others => '1'); -- Resv8a 1s
+   */         
 	//mask containig all of these fields
 	const static ap_uint<424> one_mask = 0;
+	
+	one_mask(63, 0)    = 0xFFFFFFFFFFFFFFFF; // Dummy LRH field
+	one_mask(79, 72)   = 0xFF;             //Type of service 1s
+	one_mask(135, 128) = 0xFFFFFFFFFFFFFFFF; // TTL
+	one_mask(159, 144) = 0xFFFF; // IP Checksum 1s
+    one_mask(287, 272) = 0xFFFF; // UDP Checksum ls
+    one_mask(327, 320) = 0xFF; //Resv8a 1s
 	// traffic class
-	one_mask(3, 0) = 0xF;
-	one_mask(11, 8) = 0xF;
+	//one_mask(3, 0) = 0xF;
+	//one_mask(11, 8) = 0xF;
 	// flow label
-	one_mask(31, 12) = 0xFFFFF;
+	//one_mask(31, 12) = 0xFFFFF;
 	// hop limit TODO: should already be xFF
-	one_mask(63, 56) = 0xFF;
-
+	//one_mask(63, 56) = 0xFF;
 	// UDP checksum
-	one_mask(383, 368) = 0xFFFF;
+	//one_mask(383, 368) = 0xFFFF;
 	// BTH Resv8a
-	one_mask(423,416) = 0xFF;
+	//one_mask(423,416) = 0xFF;
+	
 	const static ap_uint<3> header_length = (424/WIDTH);
 	static ap_uint<8> ai_wordCount = 0;
-
+    
+    //First 447:0 new ----- Second 63:0 old and 512:64 new
 	net_axis<WIDTH> crcWord;
-	net_axis<WIDTH> currWord;
-
-
+	static net_axis<WIDTH> currWord[1];
+    
+    //for(int i=0; i<10; i++) {
+		currWord[1]=currWord[0];
+    //}
+    
 	if (!input.empty())
 	{
-		input.read(currWord);
-		crcWord = currWord;
-
 		if (ai_wordCount < header_length)
 		{
+			input.read(currWord[0]);
+		    crcWord = currWord[0];
 			//std::cout << "applied mask: " << ai_wordCount << ", range: (" << std::dec << (int) ((ai_wordCount+1)*WIDTH)-1 << "," << (int) (ai_wordCount*WIDTH) << ")" << std::endl;
 			crcWord.data = crcWord.data | one_mask(((ai_wordCount+1)*WIDTH)-1, ai_wordCount*WIDTH);
+			dataOut.write(currWord[0]);
 		}
 		else if (ai_wordCount == header_length)
-		{
+		{   
+			input.read(currWord[0]);
+			crcWord.data(63 , 0 ) = 0xFFFFFFFF;
+		    crcWord.data(WIDTH-1, 64) = currWord[0].data(447,0);
+		    crcWord.keep(63,8) = currWord[0].keep(55,0);
+		    crcWord.keep(7,0) = 0xFF;
+		    
+		    //currWord_p1.data(WIDTH-1, 64) = 0;
+		    //currWord_p1.data(63,0) = currWord.data(511,448);
+		    //currWord_p1.keep(7,0) = 0xFF;
+		    //currWord_p1.keep((WIDTH/8)-1, 8) = 0;
+		    //currWord_p1.last = 0;
+		    
 			//std::cout << "aaapplied mask: " << ai_wordCount << ", range: (" << std::dec << (int) 423 << "," << (int) (ai_wordCount*WIDTH) << ")" << std::endl;
 			crcWord.data((424%WIDTH)-1 , 0) = crcWord.data((424%WIDTH)-1 , 0) | one_mask(423, ai_wordCount*WIDTH);
+			dataOut.write(currWord[0]);
 		}
+		else if (ai_wordCount == header_length+1){
+			crcWord.data(WIDTH-1, 64) = 0;
+		    crcWord.data(63,0) = currWord[1].data(511,448);
+		    crcWord.keep(7,0) = 0xFF;
+		    crcWord.keep((WIDTH/8)-1, 8) = 0;
+
+		} else {
+			input.read(currWord[0]);
+		    crcWord = currWord[0];
+		    dataOut.write(currWord[0]);
+	    }
+	    
 		maskedDataOut.write(crcWord);
-		dataOut.write(currWord);
+		//dataOut.write(currWord[0]);
 		ai_wordCount++;
-		if (currWord.last)
+		if (currWord[0].last)
 		{
 			ai_wordCount = 0;
 		}
@@ -301,9 +344,9 @@ void compute_crc32(	stream<net_axis<WIDTH> >& input,
 
 	enum crcFsmStateType {FIRST, SECOND};
 	static crcFsmStateType crcState = FIRST;
-	const unsigned int polynomial = 0xEDB88320; //Ethernet polynomial: 0x04C11DB7 reversed
-	static unsigned int crc = 0xdebb20e3; // 8 bytes of 0xFF with init crc 0xFFFFFFFF
-	//static unsigned int crc = 0xFFFFFFFF;
+	const unsigned int polynomial = 0xEDB88320; //Ethernet polynomial: 0x04C11DB7 reversed (Poly is reversed while calculating)
+	//static unsigned int crc = 0xdebb20e3; // 8 bytes of 0xFF with init crc 0xFFFFFFFF
+	static unsigned int crc = 0xFFFFFFFF;
 	static unsigned int mask = 0;
 
 	static net_axis<WIDTH> currWord;
@@ -361,7 +404,7 @@ void compute_crc32(	stream<net_axis<WIDTH> >& input,
 			//std::cout << std::endl;
 			std::cout << "CRC["<< DUMMY << "]: "<< std::hex << ~crc << std::endl;
 			//reset
-			crc = 0xdebb20e3;
+			crc = 0xFFFFFFFF;
 			mask = 0;
 		}
 		crcState = FIRST;
@@ -715,10 +758,10 @@ void rocev2(hls::stream<net_axis<WIDTH> >&	s_axis_rx_data,
 	extract_icrc(s_axis_rx_data, rx_crc2ipFifo);
 #else
 	extract_icrc(s_axis_rx_data, rx_dataFifo, rx_crcFifo);
-	mask_header_fields<1>(rx_dataFifo, rx_crcDataFifo, rx_maskedDataFifo);
-	round_robin_arbiter<1>(rx_maskedDataFifo, rx_maskedDataFifo1, rx_maskedDataFifo2);
-	compute_crc32<1>(rx_maskedDataFifo1, rx_calcCrcFifo1);
-	compute_crc32<2>(rx_maskedDataFifo2, rx_calcCrcFifo2);
+	mask_header_fields<WIDTH,1>(rx_dataFifo, rx_crcDataFifo, rx_maskedDataFifo);
+	round_robin_arbiter<WIDTH,1>(rx_maskedDataFifo, rx_maskedDataFifo1, rx_maskedDataFifo2);
+	compute_crc32<WIDTH,1>(rx_maskedDataFifo1, rx_calcCrcFifo1);
+	compute_crc32<WIDTH,2>(rx_maskedDataFifo2, rx_calcCrcFifo2);
 	round_robin_merger<1>(rx_calcCrcFifo1, rx_calcCrcFifo2, rx_calcCrcFifo);
 	drop_invalid_crc(rx_crcDataFifo, rx_crcFifo, rx_calcCrcFifo, rx_crc2ipFifo, regCrcDropPkgCount);
 #endif
@@ -746,10 +789,10 @@ void rocev2(hls::stream<net_axis<WIDTH> >&	s_axis_rx_data,
 #ifdef DISABLE_CRC_CHECK
 	insert_icrc(tx_ip2crcFifo, m_axis_tx_data);
 #else
-	mask_header_fields<2>(tx_ip2crcFifo, tx_crcDataFifo, tx_maskedDataFifo);
-	round_robin_arbiter<2>(tx_maskedDataFifo, tx_maskedDataFifo1, tx_maskedDataFifo2);
-	compute_crc32<3>(tx_maskedDataFifo1, crcFifo1);
-	compute_crc32<4>(tx_maskedDataFifo2, crcFifo2);
+	mask_header_fields<WIDTH,2>(tx_ip2crcFifo, tx_crcDataFifo, tx_maskedDataFifo);
+	round_robin_arbiter<WIDTH,2>(tx_maskedDataFifo, tx_maskedDataFifo1, tx_maskedDataFifo2);
+	compute_crc32<WIDTH,3>(tx_maskedDataFifo1, crcFifo1);
+	compute_crc32<WIDTH,4>(tx_maskedDataFifo2, crcFifo2);
 	round_robin_merger<2>(crcFifo1, crcFifo2, crcFifo);
 	insert_icrc(crcFifo, tx_crcDataFifo, m_axis_tx_data);
 #endif

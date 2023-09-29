@@ -1452,7 +1452,7 @@ int test_tx_debug(std::ifstream& inputFile, std::ofstream& outputFile, ap_uint<1
 		uPtr++;
 	}
 	*/
-	s_axis_tx_meta.write(txMeta(APP_WRITE_IMD, 0x11, 0, 0x7fc292600000, pkgLen));
+	s_axis_tx_meta.write(txMeta(APP_WRITE, 0x11, 0, 0x7fc292600000, pkgLen));
 
 	//process write packet
 	int pkgCount = 0;
